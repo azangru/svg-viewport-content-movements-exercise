@@ -1,9 +1,11 @@
 import { LitElement, css, html, svg } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { DragController } from './dragController';
+import { customElement } from 'lit/decorators.js';
+
+import { ViewportLocationController } from './viewportLocationController';
 
 const width = 800;
 const height = 600;
+
 
 @customElement('my-element')
 export class MyElement extends LitElement {
@@ -16,19 +18,20 @@ export class MyElement extends LitElement {
     }
   `
 
-  private drag: DragController = new DragController(this);
+  private viewportLocation: ViewportLocationController = new ViewportLocationController(this);
 
-  @state()
-  private x = 0;
-
-  connectedCallback() {
-    super.connectedCallback()
-    this.addEventListener('drag-stop', this.updateX)
+  constructor () {
+    super();
   }
 
-  updateX = () => {
-    this.x = this.x + this.drag.shift_x;
-    this.drag.shift_x = 0;
+  firstUpdated() {
+    super.connectedCallback();
+    const svg = this.shadowRoot?.querySelector('svg');
+    this.viewportLocation.setLocationAndElement({
+      start: 32314002,
+      end: 32318799,
+      element: svg as unknown as HTMLElement
+    });
   }
 
   render() {
@@ -41,14 +44,27 @@ export class MyElement extends LitElement {
 
   renderSvg() {
     return html`
-      <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 ${width} ${height}">
         ${this.renderRect()}
       </svg>`;
   }
 
   renderRect () {
-    const x = this.x + this.drag.shift_x;
-    return svg`<rect width=${width / 4} height="10" x=${x} y=${height / 2}></rect>`;
+    const scale = this.viewportLocation.scale;
+
+    if (!scale) {
+      return null;
+    }
+    const start = 32314002;
+    const end = 32318799;
+
+    const relativeStart = Math.max(0, start - (this.viewportLocation.start as number));
+    const relativeEnd = Math.max(0, end - (this.viewportLocation.start as number));
+
+    const x = scale(relativeStart);
+    const width = scale(relativeEnd);
+
+    return svg`<rect width=${width} height="10" x=${x} y=${height / 2}></rect>`;
   }
 
 }
